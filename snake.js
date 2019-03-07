@@ -1,6 +1,66 @@
-const M = 40;
-const N = 15;
-const Field = [];
+class Food {
+  constructor() {
+    this.generateNewPosition();
+    this.eaten = false;
+  }
+
+  generateNewPosition() {
+    this.position = {};
+    do {
+      this.position.x = Math.floor(Math.random() * field.width);
+      this.position.y = Math.floor(Math.random() * field.height);
+    } while (this.checkFoodPos());
+  }
+
+  checkFoodPos() {
+    Snake.coords.forEach(({ x, y }) => {
+      if (this.position.x === x && this.position.y === y) {
+        return true;
+      }
+    });
+    return false;
+  }
+}
+
+class Field {
+  constructor(width, height) {
+    this.width = width;
+    this.height = height;
+    this.generate();
+  }
+
+  generate() {
+    this.board = [];
+    for (let i = 0; i < this.height; i++) {
+      this.board[i] = [];
+      for (let j = 0; j < this.width; j++) {
+        this.board[i].push('.');
+      }
+    }
+  }
+
+  update() {
+    for (let i = 0; i < this.height; i++) {
+      for (let j = 0; j < this.width; j++) {
+        this.board[i][j] = '.';
+      }
+    }
+    Snake.coords.forEach(({ x, y }) => {
+      this.board[y][x] = "#";
+    });
+    this.board[food.position.y][food.position.x] = "X";
+  }
+
+  draw() {
+    console.clear();
+    for (let i = 0; i < this.height; i++) {
+      for (let j = 0; j < this.width; j++) {
+        process.stdout.write(this.board[i][j].toString());
+      }
+      process.stdout.write("\n");
+    }
+  }
+}
 
 const Snake = {
   coords: [
@@ -44,7 +104,7 @@ const Snake = {
   },
   check: function() {
     let c = this.coords[this.coords.length - 1];
-    if (c.x >= M || c.x < 0 || c.y >= N || c.y < 0) {
+    if (c.x >= field.width || c.x < 0 || c.y >= field.height || c.y < 0) {
       return true;
     }
     for (let i = 0; i < this.coords.length - 1; i++) {
@@ -62,61 +122,10 @@ const Snake = {
   }
 };
 
-class Food {
-  constructor() {
-    this.generateNewPosition();
-    this.eaten = false;
-  }
-
-  generateNewPosition() {
-    this.position = {};
-    do {
-      this.position.x = Math.floor(Math.random() * M);
-      this.position.y = Math.floor(Math.random() * N);
-    } while (this.checkFoodPos());
-  }
-
-  checkFoodPos() {
-    Snake.coords.forEach(({ x, y }) => {
-      if (this.position.x === x && this.position.y === y) {
-        return true;
-      }
-    });
-    return false;
-  }
-}
-
+const field = new Field(40, 15);
 const food = new Food();
 
-const generateField = (w, h) => {
-  for (let i = 0; i < h; i++) {
-    Field[i] = [];
-    for (let j = 0; j < w; j++) {
-      Field[i].push('.');
-    }
-  }
-};
-
-const drawField = field => {
-  for (let i = 0; i < field.length; i++) {
-    for (let j = 0; j < field[i].length; j++) {
-      Field[i][j] = '.';
-    }
-  }
-  Snake.coords.forEach(value => {
-    Field[value.y][value.x] = "#";
-  });
-  Field[food.position.y][food.position.x] = "X";
-  console.clear();
-  for (let i = 0; i < field.length; i++) {
-    for (let j = 0; j < field[i].length; j++) {
-      process.stdout.write(field[i][j].toString());
-    }
-    process.stdout.write("\n");
-  }
-};
-
-const updateField = () => {
+const nextTick = () => {
   if (Snake.move()) {
     clearInterval(game);
     console.clear();
@@ -124,12 +133,14 @@ const updateField = () => {
     process.exit();
   }
 };
-generateField(M, N);
-drawField(Field);
+
+field.update();
+field.draw();
 
 let game = setInterval(() => {
-  updateField();
-  drawField(Field);
+  nextTick();
+  field.update();
+  field.draw();
 }, 500);
 
 const readline = require("readline");
