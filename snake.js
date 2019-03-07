@@ -1,24 +1,17 @@
 class Food {
-  constructor() {
-    this.generateNewPosition();
-    this.eaten = false;
+  constructor(position) {
+    this.position = position;
   }
 
-  generateNewPosition() {
-    this.position = {};
-    do {
-      this.position.x = Math.floor(Math.random() * field.width);
-      this.position.y = Math.floor(Math.random() * field.height);
-    } while (this.checkFoodPos());
-  }
-
-  checkFoodPos() {
-    Snake.coords.forEach(({ x, y }) => {
-      if (this.position.x === x && this.position.y === y) {
-        return true;
-      }
-    });
+  overlapsWith({ x, y }) {
+    if (this.position.x === x && this.position.y === y) {
+      return true;
+    }
     return false;
+  }
+
+  setPosition(position) {
+    this.position = position;
   }
 }
 
@@ -26,10 +19,10 @@ class Field {
   constructor(width, height) {
     this.width = width;
     this.height = height;
-    this.generate();
+    this.initialize();
   }
 
-  generate() {
+  initialize() {
     this.board = [];
     for (let i = 0; i < this.height; i++) {
       this.board[i] = [];
@@ -39,16 +32,19 @@ class Field {
     }
   }
 
-  update() {
-    for (let i = 0; i < this.height; i++) {
-      for (let j = 0; j < this.width; j++) {
-        this.board[i][j] = '.';
-      }
+  inBounds({ x, y }) {
+    if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+      return false;
     }
-    Snake.coords.forEach(({ x, y }) => {
-      this.board[y][x] = "#";
+    return true;
+  }
+
+  update(snake, food) {
+    this.initialize();
+    snake.body.forEach(({ x, y }) => {
+      this.board[y][x] = '#';
     });
-    this.board[food.position.y][food.position.x] = "X";
+    this.board[food.position.y][food.position.x] = 'X';
   }
 
   draw() {
@@ -57,105 +53,136 @@ class Field {
       for (let j = 0; j < this.width; j++) {
         process.stdout.write(this.board[i][j].toString());
       }
-      process.stdout.write("\n");
+      process.stdout.write('\n');
     }
   }
 }
 
-const Snake = {
-  coords: [
-    {
-      x: 20,
-      y: 10
-    }
-  ],
-  velocity: "right",
-  step(dx, dy) {
-    const lastCoordinate = this.coords[this.coords.length - 1];
-    this.coords.push({
-      x: lastCoordinate.x + dx,
-      y: lastCoordinate.y + dy
-    });
-    if (this.check()) {
-      return true;
-    }
-    if (!food.eaten) {
-      this.coords.splice(0, 1);
-    } else {
-      food.eaten = !food.eaten;
-    }
-  },
-  move() {
+class Snake {
+  constructor(position, direction = 'right') {
+    this.body = [position];
+    this.direction = direction;
+  }
+
+  setDirection(direction) {
+    this.direction = direction;
+  }
+
+  overlapsWith(position) {
+    return !!this.body.find(({ x, y }) => position.x === x && position.y === y);
+  }
+
+  nextStep() {
+    const head = this.body[this.body.length - 1];
+
     let dx = 0;
     let dy = 0;
-    if (this.velocity === "up") {
+    if (this.direction === 'up') {
       dy = -1;
     }
-    if (this.velocity === "down") {
+    if (this.direction === 'down') {
       dy = 1;
     }
-    if (this.velocity === "left") {
+    if (this.direction === 'left') {
       dx = -1;
     }
-    if (this.velocity === "right") {
+    if (this.direction === 'right') {
       dx = 1;
     }
-    return this.step(dx, dy);
-  },
-  check: function() {
-    let c = this.coords[this.coords.length - 1];
-    if (c.x >= field.width || c.x < 0 || c.y >= field.height || c.y < 0) {
-      return true;
-    }
-    for (let i = 0; i < this.coords.length - 1; i++) {
-      if (c.x === this.coords[i].x && c.y === this.coords[i].y) {
-        return true;
-      }
-    }
-    if (c.x !== food.position.x || c.y !== food.position.y) {
-      return false;
-    } else {
-      food.generateNewPosition();
-      food.eaten = true;
-      return false;
+
+    return { x: head.x + dx, y: head.y + dy };
+  }
+
+  grow(position) {
+    this.body.push(position);
+  }
+
+  shrink() {
+    this.body.splice(0, 1);
+  }
+
+  move(position) {
+    this.grow(position);
+    this.shrink();
+  }
+}
+
+class Game {
+  constructor(width = 40, height = 15) {
+    this.field = new Field(width, height);
+    this.snake = new Snake(this.randomFreePosition());
+    this.food = new Food(this.randomFreePosition());
+    this.draw();
+  }
+
+  run(tick = 500) {
+    this.interval = setInterval(() => {
+      this.step();
+      this.draw();
+    }, tick);
+  }
+
+  onKey(keyName) {
+    if (['up', 'down', 'left', 'right'].includes(keyName)) {
+      this.snake.setDirection(keyName);
     }
   }
-};
 
-const field = new Field(40, 15);
-const food = new Food();
+  draw() {
+    this.field.update(this.snake, this.food);
+    this.field.draw();
+  }
 
-const nextTick = () => {
-  if (Snake.move()) {
-    clearInterval(game);
+  step() {
+    const nextStep = this.snake.nextStep();
+
+    if (!this.field.inBounds(nextStep)) {
+      this.loose();
+    } else if (this.snake.overlapsWith(nextStep)) {
+      this.loose();
+    } else if (this.food.overlapsWith(nextStep)) {
+      this.snake.grow(nextStep);
+      this.food.setPosition(this.randomFreePosition());
+    } else {
+      this.snake.move(nextStep);
+    }
+  }
+
+  loose() {
+    clearInterval(this.interval);
     console.clear();
-    console.log("You loose! Restart the game!");
+    console.log('You loose! Restart the game!');
     process.exit();
   }
-};
 
-field.update();
-field.draw();
+  randomFreePosition() {
+    let x;
+    let y;
 
-let game = setInterval(() => {
-  nextTick();
-  field.update();
-  field.draw();
-}, 500);
+    do {
+      x = Math.floor(Math.random() * this.field.width);
+      y = Math.floor(Math.random() * this.field.height);
+    } while (!this.isFree({ x, y }));
 
-const readline = require("readline");
+    return { x, y };
+  }
+
+  isFree(position) {
+    return !(this.food && this.food.overlapsWith(position)) &&
+           !(this.snake && this.snake.overlapsWith(position));
+  }
+}
+
+const game = new Game();
+game.run(500);
+
+const readline = require('readline');
 readline.emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
-process.stdin.on("keypress", (str, key) => {
-  if (key.ctrl && key.name === "c") {
+process.stdin.on('keypress', (str, key) => {
+  if (key.ctrl && key.name === 'c') {
     process.exit();
-  } else if (key.name === "up") {
-    Snake.velocity = "up";
-  } else if (key.name === "down") {
-    Snake.velocity = "down";
-  } else if (key.name === "left") {
-    Snake.velocity = "left";
-  } else if (key.name === "right") {
-    Snake.velocity = "right";
+  } else {
+    game.onKey(key.name);
   }
 });
