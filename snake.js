@@ -83,8 +83,8 @@ const Food = {
   eaten: false,
   createNewPosition: function() {
     do {
-      this.x = Math.round(-0.5 + Math.random() * (M + 1));
-      this.y = Math.round(-0.5 + Math.random() * (N + 1));
+      this.x = Math.floor(Math.random() * M);
+      this.y = Math.floor(Math.random() * N);
       console.log(Food);
     } while (checkFoodPos());
   }
