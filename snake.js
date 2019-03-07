@@ -19,10 +19,10 @@ const Snake = {
     if (this.check()) {
       return true;
     }
-    if (!Food.eaten) {
+    if (!food.eaten) {
       this.coords.splice(0, 1);
     } else {
-      Food.eaten = !Food.eaten;
+      food.eaten = !food.eaten;
     }
   },
   move() {
@@ -52,37 +52,41 @@ const Snake = {
         return true;
       }
     }
-    if (c.x !== Food.x || c.y !== Food.y) {
+    if (c.x !== food.position.x || c.y !== food.position.y) {
       return false;
     } else {
-      Food.createNewPosition();
-      Food.eaten = true;
+      food.generateNewPosition();
+      food.eaten = true;
       return false;
     }
   }
 };
 
-const Food = {
-  x: 14,
-  y: 6,
-  eaten: false,
-  createNewPosition: function() {
-    do {
-      this.x = Math.floor(Math.random() * M);
-      this.y = Math.floor(Math.random() * N);
-      console.log(Food);
-    } while (checkFoodPos());
+class Food {
+  constructor() {
+    this.generateNewPosition();
+    this.eaten = false;
   }
-};
 
-function checkFoodPos() {
-  Snake.coords.forEach(value => {
-    if (value.x === Food.x && value.y === Food.y) {
-      return true;
-    }
-  });
-  return false;
+  generateNewPosition() {
+    this.position = {};
+    do {
+      this.position.x = Math.floor(Math.random() * M);
+      this.position.y = Math.floor(Math.random() * N);
+    } while (this.checkFoodPos());
+  }
+
+  checkFoodPos() {
+    Snake.coords.forEach(({ x, y }) => {
+      if (this.position.x === x && this.position.y === y) {
+        return true;
+      }
+    });
+    return false;
+  }
 }
+
+const food = new Food();
 
 const generateField = (w, h) => {
   for (let i = 0; i < h; i++) {
@@ -102,7 +106,7 @@ const drawField = field => {
   Snake.coords.forEach(value => {
     Field[value.y][value.x] = "#";
   });
-  Field[Food.y][Food.x] = "X";
+  Field[food.position.y][food.position.x] = "X";
   console.clear();
   for (let i = 0; i < field.length; i++) {
     for (let j = 0; j < field[i].length; j++) {
