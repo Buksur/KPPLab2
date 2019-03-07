@@ -10,52 +10,37 @@ const Snake = {
     }
   ],
   velocity: "right",
-  move: function() {
-    let c = this.coords;
+  step(dx, dy) {
+    const lastCoordinate = this.coords[this.coords.length - 1];
+    this.coords.push({
+      x: lastCoordinate.x + dx,
+      y: lastCoordinate.y + dy
+    });
+    if (this.check()) {
+      return true;
+    }
+    if (!Food.eaten) {
+      this.coords.splice(0, 1);
+    } else {
+      Food.eaten = !Food.eaten;
+    }
+  },
+  move() {
+    let dx = 0;
+    let dy = 0;
     if (this.velocity === "up") {
-      c.push({ x: c[c.length - 1].x, y: c[c.length - 1].y - 1 });
-      if (this.check()) {
-        return true;
-      }
-      if (!Food.eaten) {
-        c.splice(0, 1);
-      } else {
-        Food.eaten = !Food.eaten;
-      }
+      dy = -1;
     }
     if (this.velocity === "down") {
-      c.push({ x: c[c.length - 1].x, y: c[c.length - 1].y + 1 });
-      if (this.check()) {
-        return true;
-      }
-      if (!Food.eaten) {
-        c.splice(0, 1);
-      } else {
-        Food.eaten = !Food.eaten;
-      }
+      dy = 1;
     }
     if (this.velocity === "left") {
-      c.push({ x: c[c.length - 1].x - 1, y: c[c.length - 1].y });
-      if (this.check()) {
-        return true;
-      }
-      if (!Food.eaten) {
-        c.splice(0, 1);
-      } else {
-        Food.eaten = !Food.eaten;
-      }
+      dx = -1;
     }
     if (this.velocity === "right") {
-      c.push({ x: c[c.length - 1].x + 1, y: c[c.length - 1].y });
-      if (this.check()) {
-        return true;
-      }
-      if (!Food.eaten) {
-        c.splice(0, 1);
-      } else {
-        Food.eaten = !Food.eaten;
-      }
+      dx = 1;
     }
+    return this.step(dx, dy);
   },
   check: function() {
     let c = this.coords[this.coords.length - 1];
